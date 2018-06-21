@@ -9,3 +9,7 @@
 
 ### Usage
 Open Stream URL `http://localhost:8080/live/vtv3` or `http://localhost:8080/live/vtv6` on VLC
+
+### Screen shot
+
+![vtv6](https://raw.githubusercontent.com/und3fined/vtvgo-worldcup-hd/master/screenshot.jpg "Screen shot")
