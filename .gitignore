@@ -2,3 +2,4 @@
 src/v
 src/world-cup/caches/*
 !src/world-cup/caches/.gitkeep
+/.vscode/sftp.json
