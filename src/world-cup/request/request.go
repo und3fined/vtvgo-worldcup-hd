@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"time"
 )
 
 var BaseURL string = "http://vtvgo.vn/worldcup2018"
@@ -89,10 +90,15 @@ func getLiveURL(channel string) string {
 
 	if os.IsNotExist(err) == false {
 		data, _ := ioutil.ReadFile(cachedFile)
-		lastUpdate := fileInfo.ModTime()
-		log.Printf("Last update: %s", lastUpdate)
+		nowTime := time.Now()
+		modTime := fileInfo.ModTime()
 
-		return string(data)
+		expiredTime := nowTime.Unix() - 300
+
+		if expiredTime < modTime.Unix() {
+			log.Printf("Update: %d %d", modTime.Unix(), expiredTime)
+			return string(data)
+		}
 	}
 
 	var channelURL string = BaseURL
