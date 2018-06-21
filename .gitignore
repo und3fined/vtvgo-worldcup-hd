@@ -1,0 +1,4 @@
+.DS_Store
+src/v
+src/world-cup/caches/*
+!src/world-cup/caches/.gitkeep
