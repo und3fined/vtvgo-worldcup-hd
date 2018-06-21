@@ -96,7 +96,6 @@ func getLiveURL(channel string) string {
 		expiredTime := nowTime.Unix() - 300
 
 		if expiredTime < modTime.Unix() {
-			log.Printf("Update: %d %d", modTime.Unix(), expiredTime)
 			return string(data)
 		}
 	}
