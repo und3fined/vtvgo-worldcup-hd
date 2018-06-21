@@ -137,6 +137,7 @@ func getLiveURL(channel string) string {
 
 	cachedContent := []byte(liveURL)
 	ioutil.WriteFile(cachedFile, cachedContent, 0644)
+	log.Printf("Save channel cache: %s", channel)
 
 	return liveURL
 }
