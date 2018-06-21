@@ -38,7 +38,7 @@ func FetchChannel(channel string) string {
 	}
 
 	textContent := string(textData)
-	textContent = strings.Replace(textContent, ",\n", ",\nhttp://localhost:8080/stream/"+channel+"/", -1)
+	textContent = strings.Replace(textContent, ",\n", ",\n/stream/"+channel+"/", -1)
 
 	return textContent
 }
