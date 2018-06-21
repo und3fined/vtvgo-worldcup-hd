@@ -12,5 +12,5 @@ Open Stream URL `http://localhost:8080/live/vtv3` or `http://localhost:8080/live
 
 ### Screen shot
 
-![vtv6](https://raw.githubusercontent.com/und3fined/vtvgo-worldcup-hd/master/screenshot.png "Screen shot")
+![vtv6](https://raw.githubusercontent.com/und3fined/vtvgo-worldcup-hd/master/screenshot2.jpg "Screen shot")
 ![vtv6_2](https://raw.githubusercontent.com/und3fined/vtvgo-worldcup-hd/master/screenshot.jpg "Screen shot 2")
