@@ -12,8 +12,6 @@ import (
 	"time"
 )
 
-var BaseURL string = "http://vtvgo.vn/worldcup2018"
-
 // FetchChannel - fetch latest channel from vtvgo.vn
 func FetchChannel(channel string) string {
 	liveURL := getLiveURL(channel)
@@ -100,7 +98,8 @@ func getLiveURL(channel string) string {
 		}
 	}
 
-	var channelURL string = BaseURL
+	var channelURL = "http://vtvgo.vn/worldcup2018/index.php"
+
 	if channel == "vtv3" {
 		channelURL = "http://vtvgo.vn/worldcup2018/vtv3.php"
 	}
