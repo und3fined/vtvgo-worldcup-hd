@@ -47,7 +47,12 @@ func FetchChannel(channel string) string {
 
 	textContent := string(textData)
 
-	go bufferData(textContent, liveURL, channel)
+	re, _ := regexp.Compile("(vtv\\d+)(.*\\-)(\\d+)(.*)")
+	parseContent := re.FindAllStringSubmatch(textContent, -1)
+
+	bufferURL := strings.Replace(liveURL, channel+"-high.m3u8", parseContent[0][0], -1)
+
+	go bufferData(bufferURL, len(parseContent))
 	go removeBufferExpired()
 
 	textContent = strings.Replace(textContent, ",\n", ",\n/stream/"+channel+"/", -1)
@@ -58,23 +63,26 @@ func FetchChannel(channel string) string {
 // StreamData - get live content from channel url
 func StreamData(channel string, fileStream string) []byte {
 	currentDir := currentPath()
+
 	// load buffer
 	bufferFile := filepath.Join(currentDir, "../caches/buffer", fileStream)
 	_, err := os.Stat(bufferFile)
-
-	if os.IsNotExist(err) == false {
-		log.Printf("Stream data: %s (cached)", fileStream)
-		data, _ := ioutil.ReadFile(bufferFile)
-		return data
-	}
-
-	log.Printf("Stream data: %s (vtv)", fileStream)
 
 	cachedFile := filepath.Join(currentDir, "../caches", channel)
 	data, _ := ioutil.ReadFile(cachedFile)
 
 	streamURL := string(data)
 	streamURL = strings.Replace(streamURL, channel+"-high.m3u8", fileStream, -1)
+
+	go bufferData(streamURL, 2)
+
+	if os.IsNotExist(err) == false {
+		// log.Printf("Stream data: %s (cached)", fileStream)
+		data, _ := ioutil.ReadFile(bufferFile)
+		return data
+	}
+
+	// log.Printf("Stream data: %s (vtv)", fileStream)
 
 	return getStreamData(streamURL)
 }
@@ -155,8 +163,7 @@ func getStreamData(streamURL string) []byte {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		var tmp []byte
-		return tmp
+		return getStreamData(streamURL)
 	}
 
 	// convert response Body to string
@@ -168,36 +175,38 @@ func getStreamData(streamURL string) []byte {
 	return streamData
 }
 
-func bufferData(playlist string, liveURL string, channel string) {
+func bufferData(bufferURL string, entends int) {
+	var listBuffer []string
+
+	re := regexp.MustCompile("(.*)(vtv\\d+)(.*\\-)(\\d+)(.*)")
+	parseURL := re.FindAllStringSubmatch(bufferURL, -1)[0]
+	bufferIndex, _ := strconv.Atoi(parseURL[4])
+
+	for i := 1; i <= entends; i++ {
+		extends := fmt.Sprintf("%s%s%s%d%s", parseURL[1], parseURL[2], parseURL[3], bufferIndex+i, parseURL[5])
+		listBuffer = append(listBuffer, extends)
+	}
+
 	currentDir := currentPath()
-	re := regexp.MustCompile("vtv\\d\\-(high|mid)-(\\d+).ts")
-	listVideo := re.FindAllString(playlist, -1)
-	lastItem := listVideo[len(listVideo)-1]
 
-	indexRe := regexp.MustCompile("(vtv\\d+)(.*\\-)(\\d+)")
-	bufferIndex := indexRe.FindAllStringSubmatch(lastItem, -1)[0]
-	lastBuffer, _ := strconv.Atoi(bufferIndex[3])
+	for _, url := range listBuffer {
+		parseURL := re.FindAllStringSubmatch(url, -1)[0]
+		video := fmt.Sprintf("%s%s%s%s", parseURL[2], parseURL[3], parseURL[4], parseURL[5])
 
-	dataExtend1 := fmt.Sprintf("%s%s%d.ts", bufferIndex[1], bufferIndex[2], lastBuffer+1)
-	dataExtend2 := fmt.Sprintf("%s%s%d.ts", bufferIndex[1], bufferIndex[2], lastBuffer+2)
-
-	listVideo = append(listVideo, dataExtend1, dataExtend2)
-
-	for _, video := range listVideo {
-		bufferURL := strings.Replace(liveURL, channel+"-high.m3u8", video, -1)
 		go func(url string, videoFile string) {
 			bufferFile := filepath.Join(currentDir, "../caches/buffer", videoFile)
 			_, err := os.Stat(bufferFile)
 
 			if os.IsNotExist(err) {
+				// log.Printf(" Get buffer: %s", videoFile)
 				data := getStreamData(url)
 
 				if len(data) != 0 {
 					ioutil.WriteFile(bufferFile, data, 0644)
-					log.Printf("Buffer: %s", videoFile)
+					// log.Printf("Save buffer: %s", videoFile)
 				}
 			}
-		}(bufferURL, video)
+		}(url, video)
 	}
 }
 
@@ -219,14 +228,16 @@ func removeBufferExpired() {
 
 	for _, f := range files {
 		go func(f os.FileInfo) {
-			bufferFilePath := filepath.Join(currentDir, "../caches/buffer", f.Name())
-			fileInfo, _ := os.Stat(bufferFilePath)
-			nowTime := time.Now()
-			modTime := fileInfo.ModTime()
-			expiredTime := nowTime.Unix() - 300
+			if f.Name() != ".gitkeep" {
+				bufferFilePath := filepath.Join(currentDir, "../caches/buffer", f.Name())
+				fileInfo, _ := os.Stat(bufferFilePath)
+				nowTime := time.Now()
+				modTime := fileInfo.ModTime()
+				expiredTime := nowTime.Unix() - 120
 
-			if expiredTime < modTime.Unix() {
-				os.Remove(bufferFilePath)
+				if modTime.Unix() < expiredTime {
+					os.Remove(bufferFilePath)
+				}
 			}
 		}(f)
 	}
