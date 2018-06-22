@@ -1,7 +1,9 @@
 package request
 
 import (
+	"bytes"
 	"fmt"
+	// "io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,6 +18,9 @@ import (
 
 // FetchChannel - fetch latest channel from vtvgo.vn
 func FetchChannel(channel string) string {
+	log.Println("--------- FetchChannel: start")
+	go removeBufferExpired()
+
 	liveURL := getLiveURL(channel)
 
 	client := &http.Client{}
@@ -47,16 +52,20 @@ func FetchChannel(channel string) string {
 
 	textContent := string(textData)
 
+	durationRe, _ := regexp.Compile("TARGETDURATION\\:(\\d+)")
+	parseDuration := durationRe.FindAllStringSubmatch(textContent, -1)[0]
+	log.Printf("--------- FetchChannel: %ss", parseDuration[1])
+
 	re, _ := regexp.Compile("(vtv\\d+)(.*\\-)(\\d+)(.*)")
 	parseContent := re.FindAllStringSubmatch(textContent, -1)
 
 	bufferURL := strings.Replace(liveURL, channel+"-high.m3u8", parseContent[0][0], -1)
 
-	go bufferData(bufferURL, len(parseContent))
-	go removeBufferExpired()
+	bufferData(bufferURL, len(parseContent))
 
 	textContent = strings.Replace(textContent, ",\n", ",\n/stream/"+channel+"/", -1)
 
+	log.Println("--------- FetchChannel: done")
 	return textContent
 }
 
@@ -66,25 +75,13 @@ func StreamData(channel string, fileStream string) []byte {
 
 	// load buffer
 	bufferFile := filepath.Join(currentDir, "../caches/buffer", fileStream)
-	_, err := os.Stat(bufferFile)
+	data, err := ioutil.ReadFile(bufferFile)
 
-	cachedFile := filepath.Join(currentDir, "../caches", channel)
-	data, _ := ioutil.ReadFile(cachedFile)
-
-	streamURL := string(data)
-	streamURL = strings.Replace(streamURL, channel+"-high.m3u8", fileStream, -1)
-
-	go bufferData(streamURL, 2)
-
-	if os.IsNotExist(err) == false {
-		// log.Printf("Stream data: %s (cached)", fileStream)
-		data, _ := ioutil.ReadFile(bufferFile)
-		return data
+	if err != nil {
+		return StreamData(channel, fileStream)
 	}
 
-	// log.Printf("Stream data: %s (vtv)", fileStream)
-
-	return getStreamData(streamURL)
+	return data
 }
 
 func getContent(url string) error {
@@ -146,7 +143,11 @@ func getLiveURL(channel string) string {
 	return liveURL
 }
 
-func getStreamData(streamURL string) []byte {
+func getStreamData(streamURL string) error {
+	currentDir := currentPath()
+
+	// log.Printf("streamURL: %s", streamURL)
+
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", streamURL, nil)
 
@@ -155,34 +156,42 @@ func getStreamData(streamURL string) []byte {
 	req.Header.Add("Referer", "http://vtvgo.vn/")
 	req.Header.Add("Origin", "http://vtvgo.vn")
 
+	re := regexp.MustCompile("(.*)(vtv\\d+)(.*\\-)(\\d+)(.*)")
+	parseURL := re.FindAllStringSubmatch(streamURL, -1)[0]
+	videoFile := fmt.Sprintf("%s%s%s%s", parseURL[2], parseURL[3], parseURL[4], parseURL[5])
+	bufferFilePath := filepath.Join(currentDir, "../caches/buffer", videoFile)
+
 	resp, err := client.Do(req)
 	if err != nil {
-		panic("Can't get data")
+		panic("Can't get stream data")
 	}
 
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return getStreamData(streamURL)
+	// Read the content
+	var bodyBytes []byte
+	if resp.Body != nil {
+		bodyBytes, _ = ioutil.ReadAll(resp.Body)
 	}
 
-	// convert response Body to string
-	streamData, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// Restore the io.ReadCloser to its original state
+	resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
+	ioutil.WriteFile(bufferFilePath, bodyBytes, 0644)
 
-	return streamData
+	return nil
 }
 
-func bufferData(bufferURL string, entends int) {
+func bufferData(bufferURL string, entends int) error {
+	ch := make(chan string)
+	buffCount := 0
+
 	var listBuffer []string
 
 	re := regexp.MustCompile("(.*)(vtv\\d+)(.*\\-)(\\d+)(.*)")
 	parseURL := re.FindAllStringSubmatch(bufferURL, -1)[0]
 	bufferIndex, _ := strconv.Atoi(parseURL[4])
 
-	for i := 1; i <= entends; i++ {
+	for i := 0; i < entends; i++ {
 		extends := fmt.Sprintf("%s%s%s%d%s", parseURL[1], parseURL[2], parseURL[3], bufferIndex+i, parseURL[5])
 		listBuffer = append(listBuffer, extends)
 	}
@@ -193,20 +202,34 @@ func bufferData(bufferURL string, entends int) {
 		parseURL := re.FindAllStringSubmatch(url, -1)[0]
 		video := fmt.Sprintf("%s%s%s%s", parseURL[2], parseURL[3], parseURL[4], parseURL[5])
 
-		go func(url string, videoFile string) {
+		go func(url string, videoFile string, ch chan string) {
 			bufferFile := filepath.Join(currentDir, "../caches/buffer", videoFile)
 			_, err := os.Stat(bufferFile)
 
 			if os.IsNotExist(err) {
-				// log.Printf(" Get buffer: %s", videoFile)
-				data := getStreamData(url)
+				buffCount++
+				getStreamData(url)
+				buffCount--
 
-				if len(data) != 0 {
-					ioutil.WriteFile(bufferFile, data, 0644)
-					// log.Printf("Save buffer: %s", videoFile)
-				}
+				ch <- parseURL[4]
 			}
-		}(url, video)
+		}(url, video, ch)
+	}
+
+	waitStreamData(parseURL[4], &buffCount, ch)
+	return nil
+}
+
+func waitStreamData(videoID string, buffCount *int, end chan string) {
+	for {
+		select {
+		case <-end:
+			log.Printf("Waiting %d", *buffCount)
+
+			if *buffCount <= 1 {
+				return
+			}
+		}
 	}
 }
 
