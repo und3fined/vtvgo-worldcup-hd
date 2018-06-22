@@ -2,4 +2,7 @@
 src/v
 src/world-cup/caches/*
 !src/world-cup/caches/.gitkeep
+!src/world-cup/caches/buffer
+src/world-cup/caches/buffer/*
+!src/world-cup/caches/buffer/.gitkeep
 /.vscode/sftp.json
