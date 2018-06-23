@@ -8,7 +8,15 @@
 - Run test with command `vgo run world-cup.go`
 
 ### Usage
-Open Stream URL `http://localhost:8080/live/vtv3` or `http://localhost:8080/live/vtv6` on VLC
+
+- Options 1: Open site: `http://localhost:8080` on Google Chrome or Firefox
+- Options 2: Open Stream URL `http://localhost:8080/live/vtv3` or `http://localhost:8080/live/vtv6` on VLC
+
+### Channel avaliable
+
+- VTV2 HD
+- VTV3 HD
+- VTV6 HD
 
 ### Screen shot
 
