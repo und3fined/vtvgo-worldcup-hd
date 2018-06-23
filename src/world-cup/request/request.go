@@ -262,6 +262,8 @@ func waitStreamData(videoID string, buffCount *int, end chan string) {
 				return
 			}
 		}
+
+		time.Sleep(300 * time.Millisecond)
 	}
 }
 
