@@ -22,6 +22,7 @@ func FetchChannel(channel string) string {
 	go removeBufferExpired()
 
 	liveURL := getLiveURL(channel)
+	var totalDuration float64
 
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", liveURL, nil)
@@ -52,9 +53,16 @@ func FetchChannel(channel string) string {
 
 	textContent := string(textData)
 
-	durationRe, _ := regexp.Compile("TARGETDURATION\\:(\\d+)")
-	parseDuration := durationRe.FindAllStringSubmatch(textContent, -1)[0]
-	log.Printf("--- Duration target: %ss", parseDuration[1])
+	durationRe, _ := regexp.Compile("(TARGETDURATION|EXTINF)\\:([0-9]\\.?([0-9]+)?)")
+	parseDuration := durationRe.FindAllStringSubmatch(textContent, -1)
+
+	for i := 1; i < len(parseDuration); i++ {
+		durtation, _ := strconv.ParseFloat(parseDuration[i][2], 64)
+		totalDuration += durtation
+	}
+
+	log.Printf("--- Duration target: %ss", parseDuration[0][2])
+	log.Printf("--- Total duration: %.3fs", totalDuration)
 
 	re, _ := regexp.Compile("(vtv\\d+)(.*\\-)(\\d+)(.*)")
 	parseContent := re.FindAllStringSubmatch(textContent, -1)
@@ -169,7 +177,7 @@ func getStreamData(streamURL string) error {
 	videoFile := fmt.Sprintf("%s%s%s%s", parseURL[2], parseURL[3], parseURL[4], parseURL[5])
 	bufferFilePath := filepath.Join(currentDir, "../caches/buffer", videoFile)
 
-	log.Printf("Download: %s", videoFile)
+	// log.Printf("Download: %s", videoFile)
 
 	resp, err := client.Do(req)
 	if err != nil {
