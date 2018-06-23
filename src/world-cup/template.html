@@ -5,11 +5,8 @@
 <head>
     <meta charset="utf-8">
     <title>Watch __CHANNEL__ - World Cup 2018</title>
-    <!-- optimize mobile versions -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- The Flowplayer skin -->
-    <link rel="stylesheet" href="https://releases.flowplayer.org/7.2.6/skin/skin.css">
-    <!-- Minimal styling for this standalone page (can be removed) -->
+    <link rel="stylesheet" href="https://releases.flowplayer.org/7.2.5/skin/skin.css">
     <style>
         body {
             font-family: "myriad pro", tahoma, verdana, arial, sans-serif;
@@ -53,14 +50,14 @@
         }
 
         #flowplayer>div.fp-player>a {
-            display: none !important;
+            opacity: 0 !important;
         }
     </style>
 
     <!-- Flowplayer depends on jquery for video tag based setups -->
     <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
     <!-- Flowplayer-->
-    <script src="https://releases.flowplayer.org/7.2.6/flowplayer.min.js"></script>
+    <script src="https://releases.flowplayer.org/7.2.5/flowplayer.min.js"></script>
     <!-- recommended: the hlsjs engine plugin -->
     <script src="https://releases.flowplayer.org/hlsjs/flowplayer.hlsjs.min.js"></script>
 </head>
@@ -85,34 +82,35 @@
         </div>
     </div>
     <!--/end content -->
+
+    <script>
+        flowplayer(function (api, root) {
+            var fsbutton = root.querySelector(".fp-fullscreen");
+
+            // append fullscreen button after HD menu is added on ready
+            api.on("ready", function () {
+                root.querySelector(".fp-controls").appendChild(fsbutton);
+            });
+        });
+
+        window.onload = function () {
+            flowplayer("#flowplayer", {
+                autoplay: true,
+                share: false,
+                live: true,
+                clip: {
+                    title: "__CHANNEL__ HD",
+                    sources: [
+                        {
+                            src: "__STREAM_URL__",
+                            type: "application/x-mpegurl",
+                        }
+                    ]
+                }
+            });
+        };
+    </script>
 </body>
-<script>
-    flowplayer(function (api, root) {
-        var fsbutton = root.querySelector(".fp-fullscreen");
 
-        // append fullscreen button after HD menu is added on ready
-        api.on("ready", function () {
-            root.querySelector(".fp-controls").appendChild(fsbutton);
-        });
-    });
-
-    window.onload = function () {
-        flowplayer("#flowplayer", {
-            autoplay: true,
-            share: false,
-            live: true,
-            clip: {
-                title: "__CHANNEL__ HD",
-                sources: [
-                    {
-                        src: "__STREAM_URL__",
-                        type: "application/x-mpegurl",
-                    }
-                ]
-            }
-        });
-
-    };
-</script>
 
 </html>
