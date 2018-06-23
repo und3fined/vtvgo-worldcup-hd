@@ -26,10 +26,6 @@
             max-width: 90%;
         }
 
-        #flowplayer {
-            background: #000;
-        }
-
         .channel ul {
             padding: 0;
             text-align: center;
@@ -54,6 +50,10 @@
             height: 48px;
             width: 48px;
             line-height: 45px;
+        }
+
+        #flowplayer>div.fp-player>a {
+            display: none !important;
         }
     </style>
 
@@ -81,7 +81,7 @@
                     </li>
                 </ul>
             </div>
-            <div id="flowplayer"></div>
+            <div id="flowplayer" class="fp-mute"></div>
         </div>
     </div>
     <!--/end content -->
@@ -98,14 +98,18 @@
 
     window.onload = function () {
         flowplayer("#flowplayer", {
-            autoplay: true,
+            autoplay: false,
             share: false,
             live: true,
-            playlist: [{
+            clip: {
+                src: "__STREAM_URL__",
                 sources: [
-                    { type: "application/x-mpegurl", src: "__STREAM_URL__" }
+                    {
+                        title: "__CHANNEL__ HD",
+                        type: "application/x-mpegurl",
+                    }
                 ]
-            }]
+            }
         });
 
     };
