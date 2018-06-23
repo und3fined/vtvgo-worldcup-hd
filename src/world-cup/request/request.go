@@ -18,7 +18,7 @@ import (
 
 // FetchChannel - fetch latest channel from vtvgo.vn
 func FetchChannel(channel string) string {
-	log.Println("--------- FetchChannel: start")
+	log.Printf("--- Fetch %s: start", channel)
 	go removeBufferExpired()
 
 	liveURL := getLiveURL(channel)
@@ -54,7 +54,7 @@ func FetchChannel(channel string) string {
 
 	durationRe, _ := regexp.Compile("TARGETDURATION\\:(\\d+)")
 	parseDuration := durationRe.FindAllStringSubmatch(textContent, -1)[0]
-	log.Printf("--------- FetchChannel: %ss", parseDuration[1])
+	log.Printf("--- Duration target: %ss", parseDuration[1])
 
 	re, _ := regexp.Compile("(vtv\\d+)(.*\\-)(\\d+)(.*)")
 	parseContent := re.FindAllStringSubmatch(textContent, -1)
@@ -65,7 +65,7 @@ func FetchChannel(channel string) string {
 
 	textContent = strings.Replace(textContent, ",\n", ",\n/stream/"+channel+"/", -1)
 
-	log.Println("--------- FetchChannel: done")
+	log.Printf("--- Fetch %s: done", channel)
 	return textContent
 }
 
@@ -74,10 +74,20 @@ func StreamData(channel string, fileStream string) []byte {
 	currentDir := currentPath()
 
 	// load buffer
+	channelFile := filepath.Join(currentDir, "../caches", channel)
 	bufferFile := filepath.Join(currentDir, "../caches/buffer", fileStream)
 	data, err := ioutil.ReadFile(bufferFile)
 
 	if err != nil {
+		log.Printf("%s not found!", fileStream)
+
+		channelURL, _ := ioutil.ReadFile(channelFile)
+		re, _ := regexp.Compile("(.*)(vtv.*)")
+		parseURL := re.FindAllStringSubmatch(string(channelURL), -1)[0]
+		streamURL := fmt.Sprintf("%s%s", parseURL[1], fileStream)
+
+		getStreamData(streamURL)
+
 		return StreamData(channel, fileStream)
 	}
 
@@ -146,8 +156,6 @@ func getLiveURL(channel string) string {
 func getStreamData(streamURL string) error {
 	currentDir := currentPath()
 
-	// log.Printf("streamURL: %s", streamURL)
-
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", streamURL, nil)
 
@@ -160,6 +168,8 @@ func getStreamData(streamURL string) error {
 	parseURL := re.FindAllStringSubmatch(streamURL, -1)[0]
 	videoFile := fmt.Sprintf("%s%s%s%s", parseURL[2], parseURL[3], parseURL[4], parseURL[5])
 	bufferFilePath := filepath.Join(currentDir, "../caches/buffer", videoFile)
+
+	log.Printf("Download: %s", videoFile)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -224,7 +234,7 @@ func waitStreamData(videoID string, buffCount *int, end chan string) {
 	for {
 		select {
 		case <-end:
-			log.Printf("Waiting %d", *buffCount)
+			// log.Printf("Waiting %d", *buffCount)
 
 			if *buffCount <= 1 {
 				return
