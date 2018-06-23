@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+var downloadCaching []string
+
 // FetchChannel - fetch latest channel from vtvgo.vn
 func FetchChannel(channel string) string {
 	log.Printf("--- Fetch %s: start", channel)
@@ -66,10 +68,9 @@ func FetchChannel(channel string) string {
 
 	re, _ := regexp.Compile("(vtv\\d+)(.*\\-)(\\d+)(.*)")
 	parseContent := re.FindAllStringSubmatch(textContent, -1)
-
 	bufferURL := strings.Replace(liveURL, channel+"-high.m3u8", parseContent[0][0], -1)
 
-	bufferData(bufferURL, len(parseContent))
+	go bufferData(bufferURL, len(parseContent), 0)
 
 	textContent = strings.Replace(textContent, ",\n", ",\n/stream/"+channel+"/", -1)
 
@@ -87,7 +88,7 @@ func StreamData(channel string, fileStream string) []byte {
 	data, err := ioutil.ReadFile(bufferFile)
 
 	if err != nil {
-		log.Printf("%s not found!", fileStream)
+		// log.Printf("%s not found!", fileStream)
 
 		channelURL, _ := ioutil.ReadFile(channelFile)
 		re, _ := regexp.Compile("(.*)(vtv.*)")
@@ -95,7 +96,9 @@ func StreamData(channel string, fileStream string) []byte {
 		streamURL := fmt.Sprintf("%s%s", parseURL[1], fileStream)
 
 		getStreamData(streamURL)
+		// go bufferData(streamURL, 3, 1)
 
+		time.Sleep(300 * time.Millisecond)
 		return StreamData(channel, fileStream)
 	}
 
@@ -163,6 +166,16 @@ func getLiveURL(channel string) string {
 
 func getStreamData(streamURL string) error {
 	currentDir := currentPath()
+	re := regexp.MustCompile("(.*)(vtv\\d+)(.*\\-)(\\d+)(.*)")
+	parseURL := re.FindAllStringSubmatch(streamURL, -1)[0]
+	videoFile := fmt.Sprintf("%s%s%s%s", parseURL[2], parseURL[3], parseURL[4], parseURL[5])
+	bufferFilePath := filepath.Join(currentDir, "../caches/buffer", videoFile)
+
+	if indexOf(videoFile, downloadCaching) != -1 {
+		return nil
+	}
+
+	downloadCaching = append(downloadCaching, videoFile)
 
 	client := &http.Client{}
 	req, _ := http.NewRequest("GET", streamURL, nil)
@@ -171,13 +184,6 @@ func getStreamData(streamURL string) error {
 	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.87 Safari/537.36")
 	req.Header.Add("Referer", "http://vtvgo.vn/")
 	req.Header.Add("Origin", "http://vtvgo.vn")
-
-	re := regexp.MustCompile("(.*)(vtv\\d+)(.*\\-)(\\d+)(.*)")
-	parseURL := re.FindAllStringSubmatch(streamURL, -1)[0]
-	videoFile := fmt.Sprintf("%s%s%s%s", parseURL[2], parseURL[3], parseURL[4], parseURL[5])
-	bufferFilePath := filepath.Join(currentDir, "../caches/buffer", videoFile)
-
-	// log.Printf("Download: %s", videoFile)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -196,10 +202,18 @@ func getStreamData(streamURL string) error {
 	resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	ioutil.WriteFile(bufferFilePath, bodyBytes, 0644)
 
+	cacheIndex := indexOf(videoFile, downloadCaching)
+
+	if cacheIndex != -1 {
+		downloadCaching = append(downloadCaching[:cacheIndex], downloadCaching[cacheIndex+1:]...)
+	}
+
+	// log.Printf("%s downloaded!", videoFile)
+
 	return nil
 }
 
-func bufferData(bufferURL string, entends int) error {
+func bufferData(bufferURL string, entends int, start int) error {
 	ch := make(chan string)
 	buffCount := 0
 
@@ -209,7 +223,7 @@ func bufferData(bufferURL string, entends int) error {
 	parseURL := re.FindAllStringSubmatch(bufferURL, -1)[0]
 	bufferIndex, _ := strconv.Atoi(parseURL[4])
 
-	for i := 0; i < entends; i++ {
+	for i := start; i < entends; i++ {
 		extends := fmt.Sprintf("%s%s%s%d%s", parseURL[1], parseURL[2], parseURL[3], bufferIndex+i, parseURL[5])
 		listBuffer = append(listBuffer, extends)
 	}
@@ -292,4 +306,13 @@ func currentPath() string {
 	}
 
 	return dir
+}
+
+func indexOf(word string, data []string) int {
+	for k, v := range data {
+		if word == v {
+			return k
+		}
+	}
+	return -1
 }
