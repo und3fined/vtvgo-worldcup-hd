@@ -3,7 +3,11 @@ package main // import "world-cup"
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"path/filepath"
+	"runtime"
+	"strings"
 
 	"github.com/buaazp/fasthttprouter"
 	"github.com/valyala/fasthttp"
@@ -14,6 +18,8 @@ var (
 	addr     = flag.String("addr", ":8080", "TCP address to listen to")
 	compress = flag.Bool("compress", false, "Whether to enable transparent response compression")
 )
+
+var activeChannel = []string{"vtv2", "vtv3", "vtv6"}
 
 func main() {
 	flag.Parse()
@@ -39,7 +45,7 @@ func main() {
 }
 
 func getIndex(ctx *fasthttp.RequestCtx) {
-	fmt.Fprint(ctx, "Welcome!\n")
+	ctx.Redirect("/watch/vtv6", fasthttp.StatusMovedPermanently)
 }
 
 func getHello(ctx *fasthttp.RequestCtx) {
@@ -48,11 +54,16 @@ func getHello(ctx *fasthttp.RequestCtx) {
 
 func getLiveChannel(ctx *fasthttp.RequestCtx) {
 	channel := fmt.Sprintf("%s", ctx.UserValue("channel"))
-	content := request.FetchChannel(channel)
 
 	ctx.SetContentType("text/plain charset=UTF-8")
 	ctx.SetStatusCode(fasthttp.StatusOK)
-	ctx.SetBody([]byte(content))
+
+	if request.IndexOf(channel, activeChannel) == -1 {
+		ctx.SetBody([]byte("Channel not supported"))
+	} else {
+		content := request.FetchChannel(channel)
+		ctx.SetBody([]byte(content))
+	}
 }
 
 func getStreamFile(ctx *fasthttp.RequestCtx) {
@@ -67,5 +78,32 @@ func getStreamFile(ctx *fasthttp.RequestCtx) {
 }
 
 func getWatchChannel(ctx *fasthttp.RequestCtx) {
+	channel := fmt.Sprintf("%s", ctx.UserValue("channel"))
 
+	ctx.SetStatusCode(fasthttp.StatusOK)
+
+	if request.IndexOf(channel, activeChannel) == -1 {
+		ctx.SetContentType("text/plain charset=UTF-8")
+		ctx.SetBody([]byte("Channel not supported"))
+	} else {
+		currentDir := currentPath()
+		templateFile := filepath.Join(currentDir, "./template.html")
+		data, _ := ioutil.ReadFile(templateFile)
+
+		content := strings.Replace(string(data), "__STREAM_URL__", "/live/"+channel, -1)
+		content = strings.Replace(content, "__CHANNEL__", strings.ToUpper(channel), -1)
+
+		ctx.SetContentType("text/html charset=UTF-8")
+		ctx.SetBody([]byte(content))
+	}
+}
+
+func currentPath() string {
+	_, filename, _, _ := runtime.Caller(1)
+	dir, err := filepath.Abs(filepath.Dir(filename))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return dir
 }

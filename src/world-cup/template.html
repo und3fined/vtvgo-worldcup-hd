@@ -1,0 +1,114 @@
+<!doctype html>
+
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Watch __CHANNEL__ - World Cup 2018</title>
+    <!-- optimize mobile versions -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- The Flowplayer skin -->
+    <link rel="stylesheet" href="https://releases.flowplayer.org/7.2.6/skin/skin.css">
+    <!-- Minimal styling for this standalone page (can be removed) -->
+    <style>
+        body {
+            font-family: "myriad pro", tahoma, verdana, arial, sans-serif;
+            font-size: 14px;
+            margin: 0;
+            padding: 0;
+            background: #074a8e url("https://raw.githubusercontent.com/und3fined/vtvgo-worldcup-hd/master/background.jpg");
+            background-repeat: no-repeat;
+            background-size: cover;
+        }
+
+        #content {
+            margin: 8px auto;
+            max-width: 90%;
+        }
+
+        #flowplayer {
+            background: #000;
+        }
+
+        .channel ul {
+            padding: 0;
+            text-align: center;
+            list-style: none;
+        }
+
+        .channel li {
+            display: inline-block;
+            margin: 4px;
+            height: 48px;
+            width: 48px;
+            text-align: center;
+            background: #CC3536;
+            border-radius: 32px;
+        }
+
+        .channel li a {
+            text-decoration: none;
+            font-weight: 700;
+            color: #fff;
+            display: block;
+            height: 48px;
+            width: 48px;
+            line-height: 45px;
+        }
+    </style>
+
+    <!-- Flowplayer depends on jquery for video tag based setups -->
+    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+    <!-- Flowplayer-->
+    <script src="https://releases.flowplayer.org/7.2.6/flowplayer.min.js"></script>
+    <!-- recommended: the hlsjs engine plugin -->
+    <script src="https://releases.flowplayer.org/hlsjs/flowplayer.hlsjs.min.js"></script>
+</head>
+
+<body>
+    <div id="content">
+        <div id="classic" class="is-closeable">
+            <div class="channel">
+                <ul>
+                    <li>
+                        <a class="btn-channel" href="/watch/vtv2">VTV2</a>
+                    </li>
+                    <li>
+                        <a class="btn-channel" href="/watch/vtv3">VTV3</a>
+                    </li>
+                    <li>
+                        <a class="btn-channel" href="/watch/vtv6">VTV6</a>
+                    </li>
+                </ul>
+            </div>
+            <div id="flowplayer"></div>
+        </div>
+    </div>
+    <!--/end content -->
+</body>
+<script>
+    flowplayer(function (api, root) {
+        var fsbutton = root.querySelector(".fp-fullscreen");
+
+        // append fullscreen button after HD menu is added on ready
+        api.on("ready", function () {
+            root.querySelector(".fp-controls").appendChild(fsbutton);
+        });
+    });
+
+    window.onload = function () {
+        flowplayer("#flowplayer", {
+            autoplay: true,
+            share: false,
+            live: true,
+            playlist: [{
+                sources: [
+                    { type: "application/x-mpegurl", src: "__STREAM_URL__" }
+                ]
+            }]
+        });
+
+    };
+</script>
+
+</html>

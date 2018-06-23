@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	// "io"
+	"crypto/tls"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -43,7 +44,6 @@ func FetchChannel(channel string) string {
 	if resp.StatusCode != 200 {
 		// delete cache file
 		removeCache(channel)
-
 		return FetchChannel(channel)
 	}
 
@@ -120,12 +120,17 @@ func getLiveURL(channel string) string {
 		return string(data)
 	}
 
-	var channelURL = "http://vtvgo.vn/worldcup2018/index.php"
+	var channelURL = "https://vtvgo.vn/worldcup2018/index.php"
 
 	if channel == "vtv3" {
-		channelURL = "http://vtvgo.vn/worldcup2018/vtv3.php"
+		channelURL = "https://vtvgo.vn/worldcup2018/vtv3.php"
 	}
 
+	if channel == "vtv2" {
+		channelURL = "https://vtvgo.vn/xem-truc-tuyen-kenh-vtv2-2.html"
+	}
+
+	http.DefaultTransport.(*http.Transport).TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	resp, err := http.Get(channelURL)
 
 	if err != nil {
@@ -147,14 +152,12 @@ func getLiveURL(channel string) string {
 	htmlStr := string(html)
 	// @end convert.
 
-	// fmt.Printf("%s", htmlStr)
-
 	// parse HTML
-	liveURLRegex, _ := regexp.Compile("(link = \")(.*)(\";)")
+	liveURLRegex, _ := regexp.Compile("(https?\\:(.*).m3u8)")
 	liveURLMatch := liveURLRegex.FindStringSubmatch(htmlStr)
 
 	// define playlistURL
-	liveURL := liveURLMatch[2]
+	liveURL := liveURLMatch[0]
 	liveURL = strings.Replace(liveURL, "mid.m3u8", "high.m3u8", -1)
 
 	cachedContent := []byte(liveURL)
@@ -171,7 +174,7 @@ func getStreamData(streamURL string) error {
 	videoFile := fmt.Sprintf("%s%s%s%s", parseURL[2], parseURL[3], parseURL[4], parseURL[5])
 	bufferFilePath := filepath.Join(currentDir, "../caches/buffer", videoFile)
 
-	if indexOf(videoFile, downloadCaching) != -1 {
+	if IndexOf(videoFile, downloadCaching) != -1 {
 		return nil
 	}
 
@@ -202,7 +205,7 @@ func getStreamData(streamURL string) error {
 	resp.Body = ioutil.NopCloser(bytes.NewBuffer(bodyBytes))
 	ioutil.WriteFile(bufferFilePath, bodyBytes, 0644)
 
-	cacheIndex := indexOf(videoFile, downloadCaching)
+	cacheIndex := IndexOf(videoFile, downloadCaching)
 
 	if cacheIndex != -1 {
 		downloadCaching = append(downloadCaching[:cacheIndex], downloadCaching[cacheIndex+1:]...)
@@ -263,7 +266,7 @@ func waitStreamData(videoID string, buffCount *int, end chan string) {
 			}
 		}
 
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
@@ -310,7 +313,8 @@ func currentPath() string {
 	return dir
 }
 
-func indexOf(word string, data []string) int {
+// IndexOf func util
+func IndexOf(word string, data []string) int {
 	for k, v := range data {
 		if word == v {
 			return k
