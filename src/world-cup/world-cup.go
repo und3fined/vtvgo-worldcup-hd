@@ -93,7 +93,7 @@ func getWatchChannel(ctx *fasthttp.RequestCtx) {
 		content := strings.Replace(string(data), "__STREAM_URL__", "/live/"+channel, -1)
 		content = strings.Replace(content, "__CHANNEL__", strings.ToUpper(channel), -1)
 
-		ctx.SetContentType("text/html charset=UTF-8")
+		ctx.SetContentType("text/html")
 		ctx.SetBody([]byte(content))
 	}
 }
