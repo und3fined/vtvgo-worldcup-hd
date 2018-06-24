@@ -6,7 +6,6 @@
     <meta charset="utf-8">
     <title>Watch __CHANNEL__ - World Cup 2018</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://releases.flowplayer.org/7.2.5/skin/skin.css">
     <style>
         body {
             font-family: "myriad pro", tahoma, verdana, arial, sans-serif;
@@ -54,12 +53,8 @@
         }
     </style>
 
-    <!-- Flowplayer depends on jquery for video tag based setups -->
-    <script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
-    <!-- Flowplayer-->
-    <script src="https://releases.flowplayer.org/7.2.5/flowplayer.min.js"></script>
-    <!-- recommended: the hlsjs engine plugin -->
-    <script src="https://releases.flowplayer.org/hlsjs/flowplayer.hlsjs.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.0.5/alt/video-js-cdn.min.css" />
+    <script src="http://vjs.zencdn.net/ie8/ie8-version/videojs-ie8.min.js"></script>
 </head>
 
 <body>
@@ -78,35 +73,28 @@
                     </li>
                 </ul>
             </div>
-            <div id="flowplayer" class="fp-mute"></div>
+            <div id="flowplayer" class="fp-mute">
+                <video id="videojs-player" class="video-js vjs-default-skin">
+                    <source src="__STREAM_URL__" type="application/x-mpegURL">
+                </video>
+
+            </div>
         </div>
     </div>
     <!--/end content -->
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.0.5/video.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-hls/5.14.1/videojs-contrib-hls.min.js"></script>
+
     <script>
-        flowplayer(function (api, root) {
-            var fsbutton = root.querySelector(".fp-fullscreen");
-
-            // append fullscreen button after HD menu is added on ready
-            api.on("ready", function () {
-                root.querySelector(".fp-controls").appendChild(fsbutton);
-            });
-        });
-
+        window.HELP_IMPROVE_VIDEOJS = false;
         window.onload = function () {
-            flowplayer("#flowplayer", {
+            videojs('videojs-player', {
+                controls: true,
                 autoplay: true,
-                share: false,
-                live: true,
-                playlist: [{
-                    title: "__CHANNEL__ HD",
-                    sources: [
-                        {
-                            src: "__STREAM_URL__",
-                            type: "application/x-mpegurl",
-                        }
-                    ]
-                }]
+                preload: 'auto',
+                fluid: true,
+                aspectRatio: '16:9',
             });
         };
     </script>
