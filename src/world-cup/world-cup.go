@@ -12,6 +12,7 @@ import (
 	"github.com/buaazp/fasthttprouter"
 	"github.com/valyala/fasthttp"
 	"world-cup/request"
+	"world-cup/vnexpress"
 )
 
 var (
@@ -27,6 +28,8 @@ func main() {
 	router := fasthttprouter.New()
 	router.GET("/", getIndex)
 	router.GET("/hello/:name", getHello)
+	router.GET("/matches", getMatches)
+	router.GET("/match-ajax", getMatchAjax)
 	router.GET("/watch/:channel", getWatchChannel)
 	router.GET("/live/:channel", getLiveChannel)
 	router.GET("/stream/:channel/:file", getStreamFile)
@@ -96,6 +99,21 @@ func getWatchChannel(ctx *fasthttp.RequestCtx) {
 		ctx.SetContentType("text/html")
 		ctx.SetBody([]byte(content))
 	}
+}
+
+func getMatches(ctx *fasthttp.RequestCtx) {
+	vnexpress.GetMatch()
+	ctx.SetContentType("text/html")
+	ctx.SetBody([]byte("Hello"))
+}
+
+func getMatchAjax(ctx *fasthttp.RequestCtx) {
+	currentDir := currentPath()
+	matchCache := filepath.Join(currentDir, "./caches/matches.json")
+	data, _ := ioutil.ReadFile(matchCache)
+
+	ctx.SetContentType("application/json")
+	ctx.SetBody(data)
 }
 
 func currentPath() string {

@@ -16,14 +16,36 @@
             background-repeat: repeat;
         }
 
-        #content {
-            margin: 8px auto;
-            max-width: 90%;
+        body::before {
+            background-image: url('https://www.fifa.com/assets/img/tournaments/17/2018/common/header_left.png');
+            content: "";
+            display: block;
+            position: fixed;
+            bottom: 0;
+            height: 130px;
+            width: 260px;
+            left: 0px;
+            z-index: -1;
         }
 
-        #flowplayer {
-            max-width: 1280px;
-            margin: 0 auto;
+        body::after {
+            background-image: url('https://www.fifa.com/assets/img/tournaments/17/2018/common/header_right.png');
+            content: "";
+            display: block;
+            position: fixed;
+            bottom: 0;
+            height: 130px;
+            width: 130px;
+            right: 0px;
+            z-index: -1;
+        }
+
+        #content {
+            margin: 32px auto;
+            max-width: 90%;
+
+            display: flex;
+            align-items: flex-start;
         }
 
         .channel ul {
@@ -55,6 +77,81 @@
         #flowplayer>div.fp-player>a {
             opacity: 0 !important;
         }
+
+        #video-player {
+            flex: 1;
+            padding-right: 12px;
+        }
+
+        #videojs-player {
+            border-radius: 3px;
+            width: 100%;
+            background: #0f4583;
+            overflow: hidden;
+        }
+
+        #right-sidebar {
+            max-width: 360px;
+        }
+
+        #matches-container {
+            background: #fff;
+            max-width: 480px;
+            min-width: 300px;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        #matches-container .next-match {
+            background: #EEEEEE;
+            color: #0f4583;
+            font-size: 15px;
+            height: 32px;
+            line-height: 32px;
+            padding: 12px;
+            font-weight: 700;
+        }
+
+        #matches-container .match {
+            border-bottom: 1px solid #f5f5f5;
+            display: flex;
+            padding: 8px 12px;
+            justify-content: space-between;
+            height: 60px;
+            align-items: center;
+            text-align: center;
+        }
+
+        #matches-container .match span {
+            display: block;
+        }
+
+        #matches-container .match span.flag {
+            width: 48px;
+            margin: 0 auto 3px;
+            height: 33px;
+            background-color: #ccc;
+        }
+
+        #matches-container .match img.flag {
+            width: 100%;
+        }
+
+        #matches-container .team {
+            flex: 1;
+        }
+
+        #matches-container .time {
+            width: 100px
+        }
+
+        #matches-container span.time {
+            padding-bottom: 3px;
+        }
+
+        #matches-container .channel {
+            height: 20px;
+        }
     </style>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.0.5/alt/video-js-cdn.min.css" />
@@ -63,7 +160,17 @@
 
 <body>
     <div id="content">
-        <div id="classic" class="is-closeable">
+        <div id="video-player" class="is-closeable">
+            <video id="videojs-player" class="video-js vjs-default-skin">
+                <source src="__STREAM_URL__" type="application/x-mpegURL">
+            </video>
+        </div>
+        <div class="right-sidebar">
+            <div id="matches-container">
+                <div class="next-match">Next match</div>
+                <match-item v-for="item in matches" v-bind:match="item" v-bind:key="item.id">
+                </match-item>
+            </div>
             <div class="channel">
                 <ul>
                     <li>
@@ -77,30 +184,73 @@
                     </li>
                 </ul>
             </div>
-            <div id="flowplayer" class="fp-mute">
-                <video id="videojs-player" class="video-js vjs-default-skin">
-                    <source src="__STREAM_URL__" type="application/x-mpegURL">
-                </video>
-
-            </div>
         </div>
     </div>
     <!--/end content -->
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/video.js/7.0.5/video.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/videojs-contrib-hls/5.14.1/videojs-contrib-hls.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.22.2/moment.min.js"></script>
 
     <script>
         window.HELP_IMPROVE_VIDEOJS = false;
         window.onload = function () {
             videojs('videojs-player', {
                 controls: true,
-                autoplay: true,
+                autoplay: false,
                 preload: 'auto',
                 fluid: true,
                 aspectRatio: '16:9',
             });
         };
+
+        // Vue app
+        Vue.component('match-item', {
+            props: ['match'],
+            methods: {
+                formatDate: function (date) {
+                    return moment(date, 'X').format('DD/MM HH:mm')
+                },
+            },
+            template: '<div class="match">' +
+                '<div class="team team-one"><span class="flag"><img class="flag" :src="match.flagOne" /></span><span class="name">{{ match.teamOne }}</span></div>' +
+                '<div class="time"><span class="time">{{ formatDate(match.time) }}</span><span class="channel"><a :href="/watch/ + match.channel"><img :src="match.thumbnail" /></a></span></div>' +
+                '<div class="team team-two"><span class="flag"><img class="flag" :src="match.flagTwo" /></span><span class="name">{{ match.teamTwo }}</span></div>'
+        });
+
+        var app = new Vue({
+            el: '#matches-container',
+            data: {
+                matches: []
+            },
+            created: function () {
+                this.fetchMatches()
+            },
+            methods: {
+                fetchMatches: function () {
+                    var currentTime = moment().add(-5, 'hours').format('X');
+                    var self = this;
+                    var matchActive = [];
+
+                    axios.get('/match-ajax').then(function (response) {
+                        var matches = response.data;
+                        matches.forEach(item => {
+                            if (matchActive.length === 6) {
+                                return;
+                            }
+
+                            if (item.time > currentTime) {
+                                matchActive.push(item)
+                            }
+                        });
+
+                        self.matches = matchActive;
+                    });
+                }
+            }
+        })
     </script>
 </body>
 
