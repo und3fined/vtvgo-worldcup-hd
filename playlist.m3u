@@ -1,4 +1,6 @@
 #EXTM3U
+#EXTINF:0,VTV2 HD
+http://localhost:8080/live/vtv2
 #EXTINF:0,VTV3 HD
 http://localhost:8080/live/vtv3
 #EXTINF:0,VTV6 HD
