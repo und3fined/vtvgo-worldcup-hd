@@ -112,6 +112,8 @@ func getMatchAjax(ctx *fasthttp.RequestCtx) {
 	matchCache := filepath.Join(currentDir, "./caches/matches.json")
 	data, _ := ioutil.ReadFile(matchCache)
 
+	go vnexpress.GetMatch()
+
 	ctx.SetContentType("application/json")
 	ctx.SetBody(data)
 }

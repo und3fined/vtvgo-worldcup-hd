@@ -6,7 +6,7 @@ import (
 	"log"
 	"math"
 	"net/http"
-	"os"
+	// "os"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -31,34 +31,34 @@ type Match struct {
 func GetMatch() string {
 	var contentText string
 	currentDir := currentPath()
-	fileCachedPath := filepath.Join(currentDir, "../caches/vnexpress.html")
+	// fileCachedPath := filepath.Join(currentDir, "../caches/vnexpress.html")
 	matchesPath := filepath.Join(currentDir, "../caches/matches.json")
-	_, err := os.Stat(fileCachedPath)
+	// _, err := os.Stat(fileCachedPath)
 
-	if os.IsNotExist(err) == false {
-		data, _ := ioutil.ReadFile(fileCachedPath)
-		contentText = string(data)
-	} else {
-		client := &http.Client{}
-		req, _ := http.NewRequest("GET", matchURL, nil)
+	// if os.IsNotExist(err) == false {
+	// 	data, _ := ioutil.ReadFile(fileCachedPath)
+	// 	contentText = string(data)
+	// } else {
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", matchURL, nil)
 
-		req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:61.0) Gecko/20100101 Firefox/61.0")
-		req.Header.Add("Referer", "https://thethao.vnexpress.net")
-		req.Header.Add("Origin", "https://thethao.vnexpress.net")
+	req.Header.Add("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:61.0) Gecko/20100101 Firefox/61.0")
+	req.Header.Add("Referer", "https://thethao.vnexpress.net")
+	req.Header.Add("Origin", "https://thethao.vnexpress.net")
 
-		resp, err := client.Do(req)
-		if err != nil {
-			panic("Can't get channel data from VTV")
-		}
-
-		defer resp.Body.Close()
-
-		// convert response Body to string
-		contentByte, _ := ioutil.ReadAll(resp.Body)
-		ioutil.WriteFile(fileCachedPath, contentByte, 0644)
-
-		contentText = string(contentByte)
+	resp, err := client.Do(req)
+	if err != nil {
+		panic("Can't get channel data from VTV")
 	}
+
+	defer resp.Body.Close()
+
+	// convert response Body to string
+	contentByte, _ := ioutil.ReadAll(resp.Body)
+	// ioutil.WriteFile(fileCachedPath, contentByte, 0644)
+
+	contentText = string(contentByte)
+	// }
 
 	re, _ := regexp.Compile("(<li id=\"(\\d+)\")|(<img src=\"(.*)\" alt=\".+\">.+<h3>)(.*)(</h3>)|(<span></span>\t<h3>)(.*)(</h3>)|(.* src=\"(.*)\" class=\"icon_tvlive\")")
 	parseContent := re.FindAllStringSubmatch(contentText, -1)
